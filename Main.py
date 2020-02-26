@@ -1,8 +1,7 @@
-import Smali.Dex as Dex
-import Smali.Encoders as Encoder
+from Smali.Dex import *
+from Smali.Analyzer import *
 
-dex = Dex.Dex("orchid.classes.dex")
-print(dex.getClass(757))
-print(dex.overview())
-#dex = Dex.Dex("orchid.classes2.dex")
-#print(dex.getClass(757))
+dex = Dex("classes.dex")
+#print(dex.getClassByName("Ls/h/e/l/l/S;"))
+print(dex.getClass(791))
+print(Analyzer.overview(dex))

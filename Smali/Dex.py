@@ -1,5 +1,9 @@
-import Smali.CodeItem as CodeItem
 import Smali.Encoders as Encoder
+from Smali.CodeItem import *
+from Smali.Field import *
+from Smali.Method import *
+from Smali.Prototype import *
+from Smali.Class import *
 
 class Dex:
     NO_INDEX = 0xffffffff
@@ -60,11 +64,17 @@ class Dex:
     def getFileSize(self):
         return self.toInt(self.FILE_SIZE)
 
+    def getRealSize(self):
+        return len(self.dex)
+
     def getHeaderSize(self):
         return self.toInt(self.HEADER_SIZE)
 
     def getEndianTag(self):
         return self.ENDIAN_TAG
+
+    def isBigEndian(self):
+        return self.mBigEndian
     
     def getLinkSize(self):
         return self.toInt(self.LINK_SIZE)
@@ -119,44 +129,6 @@ class Dex:
 
     def isBigEndian(self):
         return self.mBigEndian
-
-    def overview(self):
-        res = 'Magic: '
-        if(self.dex[:4] == b'dex\n'):
-            res += 'dex\\n\n'
-        else:
-            res += str(self.dex[:4]) + '  WARNING: corrupted magic, left raw\n'
-        res += 'Version: '
-        if(0x2f < self.dex[4] and self.dex[4] < 0x40 and 0x2f < self.dex[5] and self.dex[5] < 0x40 and 0x2f < self.dex[6] and self.dex[6] < 0x40 and self.dex[7] == 0x00):
-            res += self.dex[4 : 7].decode(self.ENCODING) + '\n'
-        else:
-            res += str(self.dex[4 : 7]) + '  WARNING: corrupted version, left raw\n'
-        res += 'Checksum: ' + self.CHECKSUM.hex() + '\n'
-        res += 'Signature: ' + self.SIGNATURE.hex() + '\n'
-        res += 'File size: '
-        realFileSize = len(self.dex)
-        if(realFileSize == self.toInt(self.FILE_SIZE)):
-            res += str(realFileSize) + '\n'
-        else:
-            res += str(self.toInt(self.FILE_SIZE)) + '  WARNING: real file size differs (real size is: ' + str(realFileSize) + ')\n'
-        res += 'Header size: '
-        if(self.toInt(self.HEADER_SIZE) == 0x70):
-            res += '0x70\n'
-        else:
-            res += str(self.toInt(self.HEADER_SIZE)) + '  WARNING: header size should be 0x70\n'
-        #Endianness cannot be corrupted, as the file would otherwise be unparseable
-        res += 'Endianness: '
-        if(self.mBigEndian):
-            res += 'big endian\n'
-        else:
-            res += 'little endian\n'
-        res += 'String count: ' + str(self.toInt(self.STRINGS_IDS_SIZE)) + '\n'
-        res += 'Type count: ' + str(self.toInt(self.TYPE_IDS_SIZE)) + '\n'
-        res += 'Prototype count: ' + str(self.toInt(self.PROTO_IDS_SIZE)) + '\n'
-        res += 'Field count: ' + str(self.toInt(self.FIELDS_IDS_SIZE)) + '\n'
-        res += 'Method count: ' + str(self.toInt(self.METHOD_IDS_SIZE)) + '\n'
-        res += 'Class count: ' + str(self.toInt(self.CLASS_DEFS_SIZE)) + '\n'
-        return res
 
     def getString(self, n):
         stringOff = self.toInt(self.dex[self.getStringsIdsOff() + 4 * n : self.getStringsIdsOff() + 4 * (n + 1)])
@@ -240,7 +212,7 @@ class Dex:
     def getClassByName(self, name):
         for i in range(self.toInt(self.CLASS_DEFS_SIZE)):
             c = self.getClass(i)
-            if(c.classId.decode(self.ENCODING) == name):
+            if(c.classId == bytes(name, Dex.ENCODING)):
                 return c
         return None
 
@@ -311,200 +283,4 @@ class Dex:
         dbg = None
         tries = None
         handlers = None
-        return CodeItem.CodeItem(self, registersSize, insSize, outsSize, dbg, insns, tries, handlers)
-    
-class Prototype:
-    def __init__(self, s, r, p):
-        self.shortyDescriptor = s
-        self.returnType = r
-        self.parameters = p
-        return
-
-class RawField:
-    def __init__(self, c, t, n):
-        self.classId = c
-        self.typeId = t
-        self.name = n
-        return
-
-class Field(RawField):
-    def __init__(self, c, t, n, af):
-        RawField.__init__(self, c, t, n)
-        self.accessFlags = af
-        return
-
-    def fromRawField(rf, af):
-        return Field(rf.classId, rf.typeId, rf.name, af)
-
-class RawMethod:
-    def __init__(self, c, p, n):
-        self.classId = c
-        self.proto = p
-        self.name = n
-        return
-
-class Method(RawMethod):
-    def __init__(self, c, p, n, af, cd):
-        RawMethod.__init__(self, c, p, n)
-        self.accessFlags = af
-        self.code = cd
-        return
-
-    def fromRawMethod(rm, af, cd):
-        return Method(rm.classId, rm.proto, rm.name, af, cd)
-
-    def __parseAccessFlags(self):
-        res = []
-        warnings = []
-        if(self.accessFlags & 0x01 == 0x01):
-            res.append('public')
-        if(self.accessFlags & 0x02 == 0x02):
-            res.append('private')
-        if(self.accessFlags & 0x04 == 0x04):
-            res.append('protected')
-        if(self.accessFlags & 0x08 == 0x08):
-            res.append('static')
-        if(self.accessFlags & 0x10 == 0x10):
-            res.append('final')
-        if(self.accessFlags & 0x20 == 0x20):
-            res.append('synchronized')
-        if(self.accessFlags & 0x40 == 0x40):
-            res.append('bridge')
-        if(self.accessFlags & 0x80 == 0x80):
-            warnings.append('INFO: the method has a declared compiler directive (last argument should be treated as a "rest" argument)')
-        if(self.accessFlags & 0x100 == 0x100):
-            res.append('native')
-        if(self.accessFlags & 0x200 == 0x200):
-            warnings.append('WARNING: the method has an invalid interface attribute')
-        if(self.accessFlags & 0x400 == 0x400):
-            res.append('abstract')
-        if(self.accessFlags & 0x800 == 0x800):
-            res.append('strictfp')
-        if(self.accessFlags & 0x1000 == 0x1000):
-            res.append('synthetic')
-        if(self.accessFlags & 0x2000 == 0x2000):
-            warnings.append('WARNING: the method has an invalid annotation attribute')
-        if(self.accessFlags & 0x4000 == 0x4000):
-            warnings.append('WARNING: the method has an invalid enum attribute')
-        if(self.accessFlags & 0x10000 == 0x10000):
-            res.append('constructor')
-        if(self.accessFlags & 0x20000 == 0x20000):
-            res.append('declared_synchronized')
-        if(self.accessFlags & 0xc8000 != 0x00):
-            warnings.append('WARNING: the class has unused flags set')
-        return [warnings, res]
-
-    def __str__(self):
-        af = self.__parseAccessFlags()
-        res = '\n'.join(af[0])
-        flags = 0x00
-        warnings = ''
-        try:
-            methodName = self.name.decode(Dex.ENCODING)
-            res += '\n.method ' + ' '.join(af[1])
-            res += ' ' + methodName + '('
-        except(Exception):
-            res += '\nWARNING: failed to decode method name. Leaving it raw.'
-            res += '\n.method ' + ' '.join(af[1])
-            res +=  ' ' + str(self.name) + '('
-        for parameter in self.proto.parameters:
-            try:
-                res += parameter.decode(Dex.ENCODING) + ' '
-            except(Exception):
-                flags += 0x01
-                res += str(parameter) + ' '
-        if(len(self.proto.parameters) > 0):
-            res = res[:-1]
-        try:
-            res += ') returns ' + self.proto.returnType.decode(Dex.ENCODING)
-        except(Exception):
-            flags += 0x02
-            res += ') returns ' + str(self.proto.returnType)
-        if(flags & 0x01 == 0x01):
-            warnings += 'WARNING: failed to decode some parameters. They were left raw.'
-        if(flags & 0x02 == 0x02):
-            warnings += 'WARNING: failed to decode some prototypes. They were left raw.'
-        return warnings + res
-
-class Class:
-    def __init__(self, dex, c, af, sc, i, sf, a, cd, sv):
-        self.dex = dex
-        self.classId = c
-        self.accessFlags = af
-        self.superclass = sc
-        self.interfaces = i
-        self.sourceFile = sf
-        self.annotations = a
-        self.staticFields = cd[0]
-        self.instanceFields = cd[1]
-        self.directMethods = cd[2]
-        self.virtualMethods = cd[3]
-        self.staticValues = sv
-        return
-
-    def __parseAccessFlags(self):
-        res = []
-        warnings = []
-        if(self.accessFlags & 0x01 == 0x01):
-            res.append('public')
-        if(self.accessFlags & 0x02 == 0x02):
-            warnings.append('WARNING: the class has an invalid private attribute')
-        if(self.accessFlags & 0x04 == 0x04):
-            warnings.append('WARNING: the class has an invalid protected attribute')
-        if(self.accessFlags & 0x08 == 0x08):
-            warnings.append('WARNING: the class has an invalid static attribute')
-        if(self.accessFlags & 0x10 == 0x10):
-            res.append('final')
-        if(self.accessFlags & 0x20 == 0x20):
-            warnings.append('WARNING: the class has an invalid synchronized attribute')
-        if(self.accessFlags & 0x40 == 0x40):
-            warnings.append('WARNING: the class has an invalid volatile or bridge attribute')
-        if(self.accessFlags & 0x80 == 0x80):
-            warnings.append('WARNING: the class has an invalid transient attribute or compiler argument directive')
-        if(self.accessFlags & 0x100 == 0x100):
-            warnings.append('WARNING: the class has an invalid native attribute')
-        if(self.accessFlags & 0x200 == 0x200):
-            res.append('interface')
-        if(self.accessFlags & 0x400 == 0x400):
-            res.append('abstract')
-        if(self.accessFlags & 0x800 == 0x800):
-            warnings.append('WARNING: the class has an invalid strictfp attribute')
-        if(self.accessFlags & 0x1000 == 0x1000):
-            res.append('synthetic')
-        if(self.accessFlags & 0x2000 == 0x2000):
-            res.append('annotation')
-        if(self.accessFlags & 0x4000 == 0x4000):
-            res.append('enum')
-        if(self.accessFlags & 0x10000 == 0x10000):
-            warnings.append('WARNING: the class has an invalid constructor attribute')
-        if(self.accessFlags & 0x20000 == 0x20000):
-            warnings.append('WARNING: the class has an invalid declared_synchronized attribute')
-        if(self.accessFlags & 0xc8000 != 0x00):
-            warnings.append('WARNING: the class has unused flags set')
-        return [warnings, res]
-
-    def __str__(self):
-        af = self.__parseAccessFlags()
-        res = '\n'.join(af[0])
-        try:
-            className = self.classId.decode(Dex.ENCODING)
-            res += '\n.class ' + ' '.join(af[1])
-            res += ' ' + className + '\n'
-        except(Exception):
-            res += '\nWARNING: failed to decode class name. Leaving it raw.'
-            res += '\n.class ' + ' '.join(af[1])
-            res +=  ' ' + str(self.classId)
-        for method in (self.directMethods + self.virtualMethods):
-            res += method.__str__() + '\n'
-            if(method.code is not None):
-                if(method.name.decode('UTF-8') == 'onCreate'):
-                    res += method.code.disassemble()
-        return res
-
-class ClassDataItem:
-    def __init__(self, sf, insf, dm, vm):
-        self.staticFields = sf
-        self.instanceFields = insf
-        self.directMethods = dm
-        self.virtualMethods = vm
-        return
+        return CodeItem(self, registersSize, insSize, outsSize, dbg, insns, tries, handlers)

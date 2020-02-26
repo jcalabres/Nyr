@@ -25,6 +25,7 @@ class CodeItem:
         typeResolver = self.dex.getType
         fieldResolver = self.dex.getRawField
         methodResolver = self.dex.getRawMethod
+        stringResolver = self.dex.getString
         i = 0
         while(i < len(bytecode)):
             c = bytecode[i]
@@ -50,6 +51,11 @@ class CodeItem:
                 B = intParser(bytecode[i + 4 : i + 6])
                 codeString += 'move/from16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
                 i += 6
+            elif(c == 0x04):
+                A = bytecode[i + 1] & 0x0f
+                B = (bytecode[i + 1] & 0xf0) >> 4
+                codeString += 'move-wide ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
+                i += 2
             elif(c == 0x05):
                 A = bytecode[i + 1]
                 B = intParser(bytecode[i + 2 : i + 4])
@@ -65,8 +71,17 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'move-object/from16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
                 i += 4
+            elif(c == 0x0a):
+                codeString += 'move-result ' + self.resolveParams(bytecode[i + 1])
+                i += 2
+            elif(c == 0x0b):
+                codeString += 'move-result-wide ' + self.resolveParams(bytecode[i + 1])
+                i += 2
             elif(c == 0x0c):
                 codeString += 'move-result-object ' + self.resolveParams(bytecode[i + 1])
+                i += 2
+            elif(c == 0x0d):
+                codeString += 'move-exception ' + self.resolveParams(bytecode[i + 1])
                 i += 2
             elif(c == 0x0e):
                 codeString += 'return-void'
@@ -102,6 +117,17 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'const-wide/16 ' + self.resolveParams(A) + ', ' + str(B)
                 i += 4
+            elif(c == 0x1a):
+                A = bytecode[i + 1]
+                B = intParser(bytecode[i + 2 : i + 4])
+                try:
+                    s = stringResolver(B).decode(encoding)
+                    codeString += 'const-string ' + self.resolveParams(A) + ', ' + s
+                except(Exception):
+                    codeString += 'WARNING: failed to decode string. Leaving it raw.\n'
+                    codeString += tabSpace * ' '
+                    codeString += 'const-string ' + self.resolveParams(A) + ', "' + str(stringResolver(B)) + '"'
+                i += 4
             elif(c == 0x1d):
                 codeString += 'monitor-enter ' + self.resolveParams(bytecode[i + 1])
                 i += 2
@@ -123,9 +149,36 @@ class CodeItem:
                     codeString += tabSpace * ' '
                     codeString += 'new-instance ' + self.resolveParams(A) + ', ' + str(typeResolver(B))
                 i += 4
-            elif(c == 0x28):
-                codeString += 'goto +' + self.resolveParams(bytecode[i + 1])
+            elif(c == 0x23):
+                A = bytecode[i + 1] & 0x0f
+                B = (bytecode[i + 1] & 0xf0) >> 4
+                C = intParser(bytecode[i + 2: i + 4])
+                try:
+                    codeString += 'new-array ' + self.resolveParams(A) + ', ' + self.resolveParams(B) + ', ' + typeResolver(C).decode(encoding)
+                except(Exception):
+                    codeString += 'WARNING: failed to decode type name. Leaving it raw.\n'
+                    codeString += tabSpace * ' '
+                    codeString += 'new-array ' + self.resolveParams(A) + ', ' + self.resolveParams(B) + ', ' + str(typeResolver(C))
+                i += 4
+            elif(c == 0x27):
+                codeString += 'throw ' + self.resolveParams(bytecode[i + 1])
                 i += 2
+            elif(c == 0x28):
+                codeString += 'goto +' + str(bytecode[i + 1])
+                i += 2
+            elif(c == 0x29):
+                zeroByte = bytecode[i + 1]
+                if(zeroByte != 0x00):
+                    codeString += 'WARNING: non-null byte encountered that should be null.\n' + tabSpace * ' '
+                A = intParser(bytecode[i + 2 : i + 4])
+                codeString += 'goto/16 +' + str(A)
+                i += 4
+            elif(c == 0x2c):
+                #TODO: implement parser for the sparse-switch-payload item, and update codeString accordingly
+                A = bytecode[i + 1]
+                B = intParser(bytecode[i + 2 : i + 6])
+                codeString += 'sparse-switch +' + self.resolveParams(A) + ', +' + str(B)
+                i += 6
             elif(c == 0x2d):
                 A = bytecode[i + 1]
                 B = bytecode[i + 2]
@@ -207,7 +260,41 @@ class CodeItem:
                     codeString += 'if-gtz '
                 elif(c == 0x3d):
                     codeString += 'if-lez '
-                codeString += self.resolveParams(A) + ' +' + str(B)
+                codeString += self.resolveParams(A) + ', +' + str(B)
+                i += 4
+            elif(c > 0x43 and c < 0x52):
+                A = bytecode[i + 1]
+                B = bytecode[i + 2]
+                C = bytecode[i + 3]
+                if(c == 0x44):
+                    codeString += 'aget '
+                elif(c == 0x45):
+                    codeString += 'aget-wide '
+                elif(c == 0x46):
+                    codeString += 'aget-object '
+                elif(c == 0x47):
+                    codeString += 'aget-boolean '
+                elif(c == 0x48):
+                    codeString += 'aget-byte '
+                elif(c == 0x49):
+                    codeString += 'aget-char '
+                elif(c == 0x4a):
+                    codeString += 'aget-short '
+                elif(c == 0x4b):
+                    codeString += 'aput '
+                elif(c == 0x4c):
+                    codeString += 'aput-wide '
+                elif(c == 0x4d):
+                    codeString += 'aput-object '
+                elif(c == 0x4e):
+                    codeString += 'aput-boolean '
+                elif(c == 0x4f):
+                    codeString += 'aput-byte '
+                elif(c == 0x50):
+                    codeString += 'aput-char '
+                elif(c == 0x51):
+                    codeString += 'aput-short '
+                codeString += self.resolveParams(A) + ', ' + self.resolveParams(B) + ', ' + self.resolveParams(C)
                 i += 4
             elif(c == 0x52):
                 A = bytecode[i + 1] & 0x0f
@@ -436,6 +523,31 @@ class CodeItem:
                     codeString += 'rem-double/2addr '
                 codeString += self.resolveParams(A) + ', ' + self.resolveParams(B)
                 i += 2
+            elif(c == 0xfc):
+                A = (bytecode[i + 1] & 0xf0) >> 4
+                G = bytecode[i + 1] & 0x0f
+                D = (bytecode[i + 4] & 0xf0) >> 4
+                C = bytecode[i + 4] & 0x0f
+                F = (bytecode[i + 5] & 0xf0) >> 4
+                E = bytecode[i + 5] & 0x0f
+                B = intParser(bytecode[i + 2 : i + 4])
+                if(A == 0):
+                    parameters = '{}, '
+                elif(A == 1):
+                    parameters = '{' + self.resolveParams(C) + '}, '
+                elif(A == 2):
+                    parameters = '{' + self.resolveParams(C) + ', ' + self.resolveParams(D) + '}, '
+                elif(A == 3):
+                    parameters = '{' + self.resolveParams(C) + ', ' + self.resolveParams(D) + ', ' + self.resolveParams(E) + '}, '
+                elif(A == 4):
+                    parameters = '{' + self.resolveParams(C) + ', ' + self.resolveParams(D) + ', ' + self.resolveParams(E) + ', ' + self.resolveParams(F) + '}, '
+                elif(A == 5):
+                    parameters = '{' + self.resolveParams(C) + ', ' + self.resolveParams(D) + ', ' + self.resolveParams(E) + ', ' + self.resolveParams(F) + ', ' + self.resolveParams(G) + '}, '
+                else:
+                    #TODO
+                    parameters = '{}'
+                codeString += 'invoke-custom ' + parameters + methodResolver(B).name.decode(encoding)
+                i += 6
             else:
                 codeString += 'Missing implementation for opcode ' + hex(c) + '\n\n'
                 break
