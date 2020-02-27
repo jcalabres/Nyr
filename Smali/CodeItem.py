@@ -473,7 +473,11 @@ class CodeItem:
                     codeString += 'invoke-static '
                 elif(c == 0x72):
                     codeString += 'invoke-interface '
-                codeString += parameters + methodResolver(B).name.decode(encoding)
+                method = methodResolver(B)
+                methodClass = method.classId.decode(encoding)
+                methodParameters = list(map(lambda x: x.decode(encoding), method.proto.parameters))
+                returnType = method.proto.returnType.decode(encoding)
+                codeString += parameters + methodClass + '->' + method.name.decode(encoding) + '(' + ''.join(methodParameters) + ')' + returnType
                 i += 6
             elif(c > 0xaf and c < 0xd0):
                 A = bytecode[i + 1] & 0x0f
