@@ -25,7 +25,7 @@ class CodeItem:
         typeResolver = self.dex.getType
         fieldResolver = self.dex.getRawField
         methodResolver = self.dex.getRawMethod
-        stringResolver = self.dex.getString
+        stringResolver = self.dex.getString 
         i = 0
         while(i < len(bytecode)):
             c = bytecode[i]
@@ -149,6 +149,25 @@ class CodeItem:
                     codeString += tabSpace * ' '
                     codeString += 'const-string ' + self.resolveParams(A) + ', "' + str(stringResolver(B)) + '"'
                 i += 4
+
+            elif(c == 0x1b):
+                A = bytecode[i + 1]
+                Blo = intParser(bytecode[i + 2 : i + 4])
+                Bhi = intParser(bytecode[i + 4 : i + 6]) << 16
+                B = Bhi + Blo 
+                try:
+                    s = stringResolver(B).decode(encoding)
+                    codeString += 'const-string ' + self.resolveParams(A) + ', ' + s
+                except(Exception):
+                    codeString += 'WARNING: failed to decode string. Leaving it raw.\n'
+                    codeString += tabSpace * ' '
+                    codeString += 'const-string/jumbo ' + self.resolveParams(A) + ', "' + str(stringResolver(B)) + '"'
+                i += 6
+            elif(c == 0x1c):
+                A = bytecode[i + 1]
+                B = intParser(bytecode[i + 2 : i + 4])
+                codeString += 'const-class ' + self.resolveParams(A) + ', ' + s
+                i += 4
             elif(c == 0x1d):
                 codeString += 'monitor-enter ' + self.resolveParams(bytecode[i + 1])
                 i += 2
@@ -159,7 +178,17 @@ class CodeItem:
                 A = bytecode[i + 1]
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'check-cast ' + self.resolveParams(A) + ', ' + typeResolver(B).decode(encoding)
-                i += 4
+                i += 4  
+            elif(c == 0x20):
+                A = bytecode[i + 1]
+                B = bytecode[i + 2]
+                C = intParser(bytecode[i + 3 : i + 5])
+                codeString += 'instance-of ' + self.resolveParams(A) + ', ' + self.resolveParams(B) + ', '+ typeResolver(C).decode(encoding)
+                i += 5
+            elif(c == 0x21):
+                A = bytecode[i + 1]
+                B = bytecode[i + 2]
+                codeString += 'array-length ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
             elif(c == 0x22):
                 A = bytecode[i + 1]
                 B = intParser(bytecode[i + 2: i + 4])
