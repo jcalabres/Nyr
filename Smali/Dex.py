@@ -51,6 +51,11 @@ class Dex:
 
     def toInt(self, n):
         if(self.mBigEndian):
+            return int.from_bytes(n, 'big', signed = True)
+        return int.from_bytes(n, 'little', signed = True)
+
+    def toUint(self, n):
+        if(self.mBigEndian):
             return int.from_bytes(n, 'big')
         return int.from_bytes(n, 'little')
 
@@ -64,13 +69,13 @@ class Dex:
         return self.SIGNATURE
 
     def getFileSize(self):
-        return self.toInt(self.FILE_SIZE)
+        return self.toUint(self.FILE_SIZE)
 
     def getRealSize(self):
         return len(self.dex)
 
     def getHeaderSize(self):
-        return self.toInt(self.HEADER_SIZE)
+        return self.toUint(self.HEADER_SIZE)
 
     def getEndianTag(self):
         return self.ENDIAN_TAG
@@ -79,80 +84,80 @@ class Dex:
         return self.mBigEndian
     
     def getLinkSize(self):
-        return self.toInt(self.LINK_SIZE)
+        return self.toUint(self.LINK_SIZE)
 
     def getLinkOff(self):
-        return self.toInt(self.LINK_OFF)
+        return self.toUint(self.LINK_OFF)
 
     def getMapOff(self):
-        return self.toInt(self.MAP_OFF)
+        return self.toUint(self.MAP_OFF)
 
     def getStringsIdsSize(self):
-        return self.toInt(self.STRINGS_IDS_SIZE)
+        return self.toUint(self.STRINGS_IDS_SIZE)
 
     def getStringsIdsOff(self):
-        return self.toInt(self.STRINGS_IDS_OFF)
+        return self.toUint(self.STRINGS_IDS_OFF)
 
     def getTypeIdsSize(self):
-        return self.toInt(self.TYPE_IDS_SIZE)
+        return self.toUint(self.TYPE_IDS_SIZE)
 
     def getTypeIdsOff(self):
-        return self.toInt(self.TYPE_IDS_OFF)
+        return self.toUint(self.TYPE_IDS_OFF)
 
     def getProtoIdsSize(self): #Thanks Proto!
-        return self.toInt(self.PROTO_IDS_SIZE)
+        return self.toUint(self.PROTO_IDS_SIZE)
 
     def getProtoIdsOff(self):
-        return self.toInt(self.PROTO_IDS_OFF)
+        return self.toUint(self.PROTO_IDS_OFF)
 
     def getFieldsIdsSize(self):
-        return self.toInt(self.FIELDS_IDS_SIZE)
+        return self.toUint(self.FIELDS_IDS_SIZE)
 
     def getFieldsIdsOff(self):
-        return self.toInt(self.FIELDS_IDS_OFF)
+        return self.toUint(self.FIELDS_IDS_OFF)
 
     def getMethodIdsSize(self):
-        return self.toInt(self.METHOD_IDS_SIZE)
+        return self.toUint(self.METHOD_IDS_SIZE)
 
     def getMethodIdsOff(self):
-        return self.toInt(self.METHOD_IDS_OFF)
+        return self.toUint(self.METHOD_IDS_OFF)
 
     def getClassDefsSize(self):
-        return self.toInt(self.CLASS_DEFS_SIZE)
+        return self.toUint(self.CLASS_DEFS_SIZE)
 
     def getClassDefsOff(self):
-        return self.toInt(self.CLASS_DEFS_OFF)
+        return self.toUint(self.CLASS_DEFS_OFF)
 
     def getDataSize(self):
-        return self.toInt(self.DATA_SIZE)
+        return self.toUint(self.DATA_SIZE)
 
     def getDataOff(self):
-        return self.toInt(self.DATA_OFF)
+        return self.toUint(self.DATA_OFF)
 
     def isBigEndian(self):
         return self.mBigEndian
 
     def getString(self, n):
-        stringOff = self.toInt(self.dex[self.getStringsIdsOff() + 4 * n : self.getStringsIdsOff() + 4 * (n + 1)])
+        stringOff = self.toUint(self.dex[self.getStringsIdsOff() + 4 * n : self.getStringsIdsOff() + 4 * (n + 1)])
         stringSize, internalOff = Encoder.uleb128Decode(self.dex[stringOff :])
         return self.dex[stringOff + internalOff : stringOff + internalOff + stringSize]
 
     def getType(self, n):
         typeIdsStart = self.getTypeIdsOff()
-        return self.getString(self.toInt(self.dex[typeIdsStart + 4 * n : typeIdsStart + 4 * (n + 1)]))
+        return self.getString(self.toUint(self.dex[typeIdsStart + 4 * n : typeIdsStart + 4 * (n + 1)]))
 
     def __parseTypeList(self, offset):
         typeList = []
-        listSize = self.toInt(self.dex[offset:offset + 4])
+        listSize = self.toUint(self.dex[offset:offset + 4])
         for i in range(0, 2 * listSize, 2):
-            typeList.append(self.getType(self.toInt(self.dex[offset + i + 4: offset + i + 6])))
+            typeList.append(self.getType(self.toUint(self.dex[offset + i + 4: offset + i + 6])))
         return typeList
 
     def getPrototype(self, n):
         protoStart = self.getProtoIdsOff() + 12 * n
-        shorty = self.getString(self.toInt(self.dex[protoStart : protoStart + 4]))
-        ret = self.getType(self.toInt(self.dex[protoStart + 4:protoStart + 8]))
-        parametersOff = self.toInt(self.dex[protoStart + 8:protoStart + 12])
+        shorty = self.getString(self.toUint(self.dex[protoStart : protoStart + 4]))
+        ret = self.getType(self.toUint(self.dex[protoStart + 4:protoStart + 8]))
+        parametersOff = self.toUint(self.dex[protoStart + 8:protoStart + 12])
         if(parametersOff == 0):
             parameters = []
         else:
@@ -161,49 +166,49 @@ class Dex:
 
     def getRawField(self, n):
         fieldStart = self.getFieldsIdsOff() + 8 * n
-        classId = self.getType(self.toInt(self.dex[fieldStart : fieldStart + 2]))
-        typeId = self.getType(self.toInt(self.dex[fieldStart + 2 : fieldStart + 4]))
-        name = self.getString(self.toInt(self.dex[fieldStart + 4 : fieldStart + 8]))
+        classId = self.getType(self.toUint(self.dex[fieldStart : fieldStart + 2]))
+        typeId = self.getType(self.toUint(self.dex[fieldStart + 2 : fieldStart + 4]))
+        name = self.getString(self.toUint(self.dex[fieldStart + 4 : fieldStart + 8]))
         return RawField(classId, typeId, name)
 
     def getRawMethod(self, n):
         methodStart = self.getMethodIdsOff() + 8 * n
-        classId = self.getType(self.toInt(self.dex[methodStart : methodStart + 2]))
-        proto = self.getPrototype(self.toInt(self.dex[methodStart + 2 : methodStart + 4]))
-        name = self.getString(self.toInt(self.dex[methodStart + 4 : methodStart + 8]))
+        classId = self.getType(self.toUint(self.dex[methodStart : methodStart + 2]))
+        proto = self.getPrototype(self.toUint(self.dex[methodStart + 2 : methodStart + 4]))
+        name = self.getString(self.toUint(self.dex[methodStart + 4 : methodStart + 8]))
         return RawMethod(classId, proto, name)
     
     def getClass(self, n):
         classStart = self.getClassDefsOff() + self.CLASS_DEF_ITEM_SIZE * n
-        classId = self.getType(self.toInt(self.dex[classStart : classStart + 4]))
-        accessFlags = self.toInt(self.dex[classStart + 4 : classStart + 8])
-        superclassIdx = self.toInt(self.dex[classStart + 8 : classStart + 12])
+        classId = self.getType(self.toUint(self.dex[classStart : classStart + 4]))
+        accessFlags = self.toUint(self.dex[classStart + 4 : classStart + 8])
+        superclassIdx = self.toUint(self.dex[classStart + 8 : classStart + 12])
         if(superclassIdx == self.NO_INDEX):
             superclass = ''
         else:
             superclass = self.getType(superclassIdx)
-        interfacesOff = self.toInt(self.dex[classStart + 12 : classStart + 16])
+        interfacesOff = self.toUint(self.dex[classStart + 12 : classStart + 16])
         if(interfacesOff == 0):
             interfaces = []
         else:
             interfaces = self.__parseTypeList(interfacesOff)
-        sourceFileIdx = self.toInt(self.dex[classStart + 16 : classStart + 20])
+        sourceFileIdx = self.toUint(self.dex[classStart + 16 : classStart + 20])
         if(sourceFileIdx == self.NO_INDEX):
             sourceFile = ''
         else:
             sourceFile = self.getString(sourceFileIdx)
-        annotationsOff = self.toInt(self.dex[classStart + 20 : classStart + 24])
+        annotationsOff = self.toUint(self.dex[classStart + 20 : classStart + 24])
         if(annotationsOff == 0):
             annotations = None
         else:
             #TODO
             annotations = None
-        classDataOff = self.toInt(self.dex[classStart + 24 : classStart + 28])
+        classDataOff = self.toUint(self.dex[classStart + 24 : classStart + 28])
         if(classDataOff == 0):
             classData = [[], [], [], []]
         else:
             classData = self.__parseClassData(classDataOff)
-        staticValuesOff = self.toInt(self.dex[classStart + 28 : classStart + 32])
+        staticValuesOff = self.toUint(self.dex[classStart + 28 : classStart + 32])
         if(staticValuesOff == 0):
             staticValues = []
         else:
@@ -213,11 +218,11 @@ class Dex:
 
     def getClassId(self, n):
         classStart = self.getClassDefsOff() + self.CLASS_DEF_ITEM_SIZE * n
-        return self.getType(self.toInt(self.dex[classStart : classStart + 4]))
+        return self.getType(self.toUint(self.dex[classStart : classStart + 4]))
 
     def findClass(self, name):
         res = []
-        for i in range(self.toInt(self.CLASS_DEFS_SIZE)):
+        for i in range(self.toUint(self.CLASS_DEFS_SIZE)):
             c = self.getClassId(i)
             if(bytes(name, Dex.ENCODING) in c):
                 res.append(self.getClass(i))
@@ -279,12 +284,12 @@ class Dex:
 
 
     def __parseCodeItem(self, offset):
-        registersSize = self.toInt(self.dex[offset : offset + 2])
-        insSize = self.toInt(self.dex[offset + 2 : offset  + 4])
-        outsSize = self.toInt(self.dex[offset + 4 : offset + 6])
-        triesSize  = self.toInt(self.dex[offset + 6 : offset + 8])
-        debugInfoOff = self.toInt(self.dex[offset + 8 : offset + 12])
-        insnsSize = self.toInt(self.dex[offset + 12 : offset + 16])
+        registersSize = self.toUint(self.dex[offset : offset + 2])
+        insSize = self.toUint(self.dex[offset + 2 : offset  + 4])
+        outsSize = self.toUint(self.dex[offset + 4 : offset + 6])
+        triesSize  = self.toUint(self.dex[offset + 6 : offset + 8])
+        debugInfoOff = self.toUint(self.dex[offset + 8 : offset + 12])
+        insnsSize = self.toUint(self.dex[offset + 12 : offset + 16])
         insns = self.dex[offset + 16 : offset + 16 + 2 * insnsSize]
         #TODO
         dbg = None

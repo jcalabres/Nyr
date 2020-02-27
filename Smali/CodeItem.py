@@ -21,7 +21,7 @@ class CodeItem:
         tabSpace = 4
         bytecode = self.insns
         encoding = self.dex.ENCODING
-        intParser = self.dex.toInt
+        intParser = self.dex.toUint
         typeResolver = self.dex.getType
         fieldResolver = self.dex.getRawField
         methodResolver = self.dex.getRawMethod
@@ -185,7 +185,7 @@ class CodeItem:
                 codeString += 'throw ' + self.resolveParams(bytecode[i + 1])
                 i += 2
             elif(c == 0x28):
-                codeString += 'goto +' + str(bytecode[i + 1])
+                codeString += 'goto ' + str(self.dex.toInt(bytecode[i + 1].to_bytes(1, 'big')))
                 i += 2
             elif(c == 0x29):
                 zeroByte = bytecode[i + 1]
@@ -268,7 +268,7 @@ class CodeItem:
                 i += 4
             elif(c > 0x37 and c < 0x3e):
                 A = bytecode[i + 1]
-                B = intParser(bytecode[i + 2 : i + 4])
+                B = self.dex.toInt(bytecode[i + 2 : i + 4])
                 if(c == 0x38):
                     codeString += 'if-eqz '
                 elif(c == 0x39):
@@ -281,7 +281,7 @@ class CodeItem:
                     codeString += 'if-gtz '
                 elif(c == 0x3d):
                     codeString += 'if-lez '
-                codeString += self.resolveParams(A) + ', +' + str(B)
+                codeString += self.resolveParams(A) + ', ' + str(B)
                 i += 4
             elif(c > 0x43 and c < 0x52):
                 A = bytecode[i + 1]
