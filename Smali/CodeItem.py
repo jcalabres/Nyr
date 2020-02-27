@@ -133,15 +133,11 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'const-wide/16 ' + self.resolveParams(A) + ', ' + str(B)
                 i += 4
-            
-            """
-            elif(c == 0x17):
-                A = bytecode[i + 1]
-                B = intParser(bytecode[i + 2 : i + 4])
-                codeString += 'const-wide/32 vAA ' + self.resolveParams(A) + ', ' + str(B)
-                i += 4
-            """
-
+#            elif(c == 0x17):
+#                A = bytecode[i + 1]
+#                B = intParser(bytecode[i + 2 : i + 4])
+#                codeString += 'const-wide/32 vAA ' + self.resolveParams(A) + ', ' + str(B)
+#                i += 4
             elif(c == 0x1a):
                 A = bytecode[i + 1]
                 B = intParser(bytecode[i + 2 : i + 4])

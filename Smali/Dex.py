@@ -9,6 +9,7 @@ from Smali.Exceptions import *
 class Dex:
     NO_INDEX = 0xffffffff
     ENCODING = 'UTF-8'
+    CLASS_DEF_ITEM_SIZE = 32
 
     def __init__(self, filePath):
         f = open(filePath, 'rb')
@@ -173,7 +174,7 @@ class Dex:
         return RawMethod(classId, proto, name)
     
     def getClass(self, n):
-        classStart = self.getClassDefsOff() + 32 * n
+        classStart = self.getClassDefsOff() + self.CLASS_DEF_ITEM_SIZE * n
         classId = self.getType(self.toInt(self.dex[classStart : classStart + 4]))
         accessFlags = self.toInt(self.dex[classStart + 4 : classStart + 8])
         superclassIdx = self.toInt(self.dex[classStart + 8 : classStart + 12])
@@ -210,12 +211,17 @@ class Dex:
             staticValues = []
         return Class(self, classId, accessFlags, superclass, interfaces, sourceFile, annotations, classData, staticValues)
 
-    def getClassByName(self, name):
+    def getClassId(self, n):
+        classStart = self.getClassDefsOff() + self.CLASS_DEF_ITEM_SIZE * n
+        return self.getType(self.toInt(self.dex[classStart : classStart + 4]))
+
+    def findClass(self, name):
+        res = []
         for i in range(self.toInt(self.CLASS_DEFS_SIZE)):
-            c = self.getClass(i)
-            if(c.classId == bytes(name, Dex.ENCODING)):
-                return c
-        return None
+            c = self.getClassId(i)
+            if(bytes(name, Dex.ENCODING) in c):
+                res.append(self.getClass(i))
+        return res
 
     def __parseClassData(self, offset):
         internalOff = 0
