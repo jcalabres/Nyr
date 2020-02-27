@@ -61,6 +61,14 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'move-wide/from16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
                 i += 4
+            elif(c == 0x06):
+                zeroByte = bytecode[i + 1]
+                if(zeroByte != 0x00):
+                    codeString += 'WARNING: non-null byte encountered that should be null.\n' + tabSpace * ' '
+                A = intParser(bytecode[i + 2 : i + 4])
+                B = intParser(bytecode[i + 4 : i + 6])
+                codeString += 'move-wide/16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
+                i += 6        
             elif(c == 0x07):
                 A = bytecode[i + 1] & 0x0f
                 B = (bytecode[i + 1] & 0xf0) >> 4
@@ -71,6 +79,14 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'move-object/from16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
                 i += 4
+            elif(c == 0x09):
+                zeroByte = bytecode[i + 1]
+                if(zeroByte != 0x00):
+                    codeString += 'WARNING: non-null byte encountered that should be null.\n' + tabSpace * ' '
+                A = intParser(bytecode[i + 2 : i + 4])
+                B = intParser(bytecode[i + 4 : i + 6])
+                codeString += 'move-object/16 ' + self.resolveParams(A) + ', ' + self.resolveParams(B)
+                i += 6
             elif(c == 0x0a):
                 codeString += 'move-result ' + self.resolveParams(bytecode[i + 1])
                 i += 2
@@ -117,6 +133,15 @@ class CodeItem:
                 B = intParser(bytecode[i + 2 : i + 4])
                 codeString += 'const-wide/16 ' + self.resolveParams(A) + ', ' + str(B)
                 i += 4
+            
+            """
+            elif(c == 0x17):
+                A = bytecode[i + 1]
+                B = intParser(bytecode[i + 2 : i + 4])
+                codeString += 'const-wide/32 vAA ' + self.resolveParams(A) + ', ' + str(B)
+                i += 4
+            """
+
             elif(c == 0x1a):
                 A = bytecode[i + 1]
                 B = intParser(bytecode[i + 2 : i + 4])

@@ -4,6 +4,7 @@ from Smali.Field import *
 from Smali.Method import *
 from Smali.Prototype import *
 from Smali.Class import *
+from Smali.Exceptions import * 
 
 class Dex:
     NO_INDEX = 0xffffffff
@@ -43,7 +44,7 @@ class Dex:
         elif(self.ENDIAN_TAG == b'\x78\x56\x34\x12'):
             self.mBigEndian = False
         else:
-            raise Exception #TODO: proper exception
+            raise DexParseException("DEX file could not be parsed caused by corrupted endian tag. ")
         
         return
 
