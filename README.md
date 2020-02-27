@@ -4,7 +4,7 @@ A Homemade Smali Disassembler.
 
 # Usage
 
-Import Nyr Dex module and start using the disassembler API.
+Import Nyr Dex module:
 
 ```python
 import Smali.Dex as Dex
@@ -14,5 +14,6 @@ dex = Dex.Dex("classes.dex")
 # TODO
 
 * Implement all the opcodes.
-* Solve bugs.
-* Create examples, installer and comparissons.
+* Test the opcodes.
+* Create a pip installer.
+* Solve bugs...
