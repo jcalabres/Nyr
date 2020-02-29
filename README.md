@@ -2,18 +2,22 @@
 
 A Homemade Smali Disassembler.
 
+# Why?
+
+As Reverse Engineers we want to know how a disassembler work. 
+
+So, the best aproach is to implement one.
+
 # Usage
 
-Import Nyr Dex module:
-
-```python
-import Smali.Dex as Dex
-dex = Dex.Dex("classes.dex")
+```
+python Cli.py {myfile.dex} [outputdir] 
 ```
 
 # TODO
 
+* Improve disassembler output.
 * Implement all the opcodes.
 * Test the opcodes.
 * Create a pip installer.
-* Solve bugs...
+* Solve bugs.

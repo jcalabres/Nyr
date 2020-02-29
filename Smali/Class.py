@@ -59,7 +59,7 @@ class Class:
         af = self.__parseAccessFlags()
         res = '\n'.join(af[0])
         try:
-            className = self.classId.decode(Dex.ENCODING)
+            className = self.classId.decode(self.ENCODING)
             res += '\n.class ' + ' '.join(af[1])
             res += ' ' + className + '\n'
         except(Exception):
