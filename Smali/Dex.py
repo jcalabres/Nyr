@@ -4,6 +4,7 @@ from Smali.Field import *
 from Smali.Method import *
 from Smali.Prototype import *
 from Smali.Class import *
+from Smali.Annotations import *
 from Smali.Exceptions import * 
 
 class Dex:
@@ -138,13 +139,6 @@ class Dex:
         typeIdsStart = self.getTypeIdsOff()
         return self.getString(self.toInt(self.dex[typeIdsStart + 4 * n : typeIdsStart + 4 * (n + 1)]))
 
-    def __parseTypeList(self, offset):
-        typeList = []
-        listSize = self.toInt(self.dex[offset:offset + 4])
-        for i in range(0, 2 * listSize, 2):
-            typeList.append(self.getType(self.toInt(self.dex[offset + i + 4: offset + i + 6])))
-        return typeList
-
     def getPrototype(self, n):
         protoStart = self.getProtoIdsOff() + 12 * n
         shorty = self.getString(self.toInt(self.dex[protoStart : protoStart + 4]))
@@ -193,7 +187,7 @@ class Dex:
         if(annotationsOff == 0):
             annotations = None
         else:
-            #TODO
+            annotations = self.__parseAnnotations(annotationsOff)
             annotations = None
         classDataOff = self.toInt(self.dex[classStart + 24 : classStart + 28])
         if(classDataOff == 0):
@@ -281,7 +275,6 @@ class Dex:
             methods.append(Method.fromRawMethod(rawMethod, accessFlags, codeItem))
         return [methods, internalOff]
 
-
     def __parseCodeItem(self, offset):
         registersSize = self.toInt(self.dex[offset : offset + 2])
         insSize = self.toInt(self.dex[offset + 2 : offset  + 4])
@@ -295,7 +288,25 @@ class Dex:
         tries = None
         handlers = None
         return CodeItem(self, registersSize, insSize, outsSize, dbg, insns, tries, handlers)
-    
+
+    def __parseAnnotations(self, offset):
+        class_annotations_off = self.toInt(self.dex[offset : offset + 4])
+        fields_size = self.toInt(self.dex[offset  + 4 : offset + 8])
+        annotated_methods_size = self.toInt(self.dex[offset  + 8 : offset + 12])
+        annotated_parameters_size = self.toInt(self.dex[offset  + 12 : offset + 16])
+        field_annotations = self.dex[offset  + 16 : offset + 16 + fields_size * 2]
+        method_annotations = self.dex[offset  + 16 + fields_size * 2 : offset + 16 + fields_size * 2 + annotated_methods_size * 2]
+        parameter_annotations = self.dex[offset  + 16 + fields_size * 2 + annotated_methods_size * 2 : offset + 16 + fields_size * 2 + annotated_methods_size * 2 + annotated_parameters_size * 2]
+        return Annotations(class_annotations_off, fields_size, annotated_methods_size, annotated_parameters_size,
+        field_annotations, method_annotations, parameter_annotations)
+
+    def __parseTypeList(self, offset):
+        typeList = []
+        listSize = self.toInt(self.dex[offset:offset + 4])
+        for i in range(0, 2 * listSize, 2):
+            typeList.append(self.getType(self.toInt(self.dex[offset + i + 4: offset + i + 6])))
+        return typeList
+
     def showProperties(self):
         print(self)
 
