@@ -62,7 +62,7 @@ class Method(RawMethod):
         flags = 0x00
         warnings = []
         try:
-            methodName = self.name.decode(Dex.ENCODING)
+            methodName = self.name.decode(self.ENCODING)
             res += '\n.method ' + ' '.join(af[1])
             res += ' ' + methodName + '('
         except(Exception):
@@ -71,14 +71,14 @@ class Method(RawMethod):
             res +=  ' ' + str(self.name) + '('
         for parameter in self.proto.parameters:
             try:
-                res += parameter.decode(Dex.ENCODING) + ' '
+                res += parameter.decode(self.ENCODING) + ' '
             except(Exception):
                 flags += 0x01
                 res += str(parameter) + ' '
         if(len(self.proto.parameters) > 0):
             res = res[:-1]
         try:
-            res += ') returns ' + self.proto.returnType.decode(Dex.ENCODING)
+            res += ') returns ' + self.proto.returnType.decode(self.ENCODING)
         except(Exception):
             flags += 0x02
             res += ') returns ' + str(self.proto.returnType)

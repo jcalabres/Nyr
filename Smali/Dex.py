@@ -4,6 +4,7 @@ from Smali.Field import *
 from Smali.Method import *
 from Smali.Prototype import *
 from Smali.Class import *
+from Smali.Annotations import *
 from Smali.Exceptions import * 
 
 class Dex:
@@ -134,9 +135,6 @@ class Dex:
     def getDataOff(self):
         return self.toUint(self.DATA_OFF)
 
-    def isBigEndian(self):
-        return self.mBigEndian
-
     def getString(self, n):
         stringOff = self.toUint(self.dex[self.getStringsIdsOff() + 4 * n : self.getStringsIdsOff() + 4 * (n + 1)])
         stringSize, internalOff = Encoder.uleb128Decode(self.dex[stringOff :])
@@ -201,7 +199,7 @@ class Dex:
         if(annotationsOff == 0):
             annotations = None
         else:
-            #TODO
+            annotations = self.__parseAnnotations(annotationsOff)
             annotations = None
         classDataOff = self.toUint(self.dex[classStart + 24 : classStart + 28])
         if(classDataOff == 0):
@@ -220,11 +218,18 @@ class Dex:
         classStart = self.getClassDefsOff() + self.CLASS_DEF_ITEM_SIZE * n
         return self.getType(self.toUint(self.dex[classStart : classStart + 4]))
 
+    def getAllClasses(self):
+        numberOfClasses=self.toInt(self.CLASS_DEFS_SIZE)
+        classes=[]
+        for i in range(numberOfClasses):
+            classes.append(self.getClass(i))
+        return classes
+    
     def findClass(self, name):
         res = []
         for i in range(self.toUint(self.CLASS_DEFS_SIZE)):
             c = self.getClassId(i)
-            if(bytes(name, Dex.ENCODING) in c):
+            if(bytes(name, self.ENCODING) in c):
                 res.append(self.getClass(i))
         return res
 
@@ -282,7 +287,6 @@ class Dex:
             methods.append(Method.fromRawMethod(rawMethod, accessFlags, codeItem))
         return [methods, internalOff]
 
-
     def __parseCodeItem(self, offset):
         registersSize = self.toUint(self.dex[offset : offset + 2])
         insSize = self.toUint(self.dex[offset + 2 : offset  + 4])
@@ -296,3 +300,64 @@ class Dex:
         tries = None
         handlers = None
         return CodeItem(self, registersSize, insSize, outsSize, dbg, insns, tries, handlers)
+
+    def __parseAnnotations(self, offset):
+        class_annotations_off = self.toInt(self.dex[offset : offset + 4])
+        fields_size = self.toInt(self.dex[offset  + 4 : offset + 8])
+        annotated_methods_size = self.toInt(self.dex[offset  + 8 : offset + 12])
+        annotated_parameters_size = self.toInt(self.dex[offset  + 12 : offset + 16])
+        field_annotations = self.dex[offset  + 16 : offset + 16 + fields_size * 2]
+        method_annotations = self.dex[offset  + 16 + fields_size * 2 : offset + 16 + fields_size * 2 + annotated_methods_size * 2]
+        parameter_annotations = self.dex[offset  + 16 + fields_size * 2 + annotated_methods_size * 2 : offset + 16 + fields_size * 2 + annotated_methods_size * 2 + annotated_parameters_size * 2]
+        return Annotations(class_annotations_off, fields_size, annotated_methods_size, annotated_parameters_size,
+        field_annotations, method_annotations, parameter_annotations)
+
+    def __parseTypeList(self, offset):
+        typeList = []
+        listSize = self.toInt(self.dex[offset:offset + 4])
+        for i in range(0, 2 * listSize, 2):
+            typeList.append(self.getType(self.toInt(self.dex[offset + i + 4: offset + i + 6])))
+        return typeList
+
+    def showProperties(self):
+        print(self)
+
+    def __str__(self):
+        res = 'Magic: '
+        magic = self.getMagic()
+        if(magic[:4] == b'dex\n'):
+            res += 'dex\\n\n'
+        else:
+            res += str(magic[:4]) + '  WARNING: corrupted magic, left raw\n'
+        res += 'Version: '
+        if(0x2f < magic[4] and magic[4] < 0x40 and 0x2f < magic[5] and magic[5] < 0x40 and 0x2f < magic[6] and magic[6] < 0x40 and magic[7] == 0x00):
+            res += magic[4 : 7].decode(self.ENCODING) + '\n'
+        else:
+            res += str(magic[4 : 7]) + '  WARNING: corrupted version, left raw\n'
+        res += 'Checksum: ' + self.getChecksum().hex() + '\n'
+        res += 'Signature: ' + self.getSignature().hex() + '\n'
+        res += 'File size: '
+        realFileSize = self.getRealSize()
+        if(realFileSize == self.getFileSize()):
+            res += str(realFileSize) + '\n'
+        else:
+            res += str(self.getFileSize()) + '  WARNING: real file size differs (real size is: ' + str(realFileSize) + ')\n'
+        res += 'Header size: '
+        if(self.getHeaderSize() == 0x70):
+            res += '0x70\n'
+        else:
+            res += str(self.getHeaderSize()) + '  WARNING: header size should be 0x70\n'
+        #Endianness cannot be corrupted, as the file would otherwise be unparseable
+        res += 'Endianness: '
+        if(self.isBigEndian()):
+            res += 'big endian\n'
+        else:
+            res += 'little endian\n'
+        res += 'String count: ' + str(self.getStringsIdsSize()) + '\n'
+        res += 'Type count: ' + str(self.getTypeIdsSize()) + '\n'
+        res += 'Prototype count: ' + str(self.getProtoIdsSize()) + '\n'
+        res += 'Field count: ' + str(self.getFieldsIdsSize()) + '\n'
+        res += 'Method count: ' + str(self.getMethodIdsSize()) + '\n'
+        res += 'Class count: ' + str(self.getClassDefsSize()) 
+        return res
+
