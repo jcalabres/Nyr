@@ -239,7 +239,7 @@ class CodeItem:
                 methodParameters = list(map(lambda x: x.decode(self.encoding), method.proto.parameters))
                 returnType = method.proto.returnType.decode(self.encoding)
                 codeString += methodClass + '->' + method.name.decode(self.encoding) + '(' + ''.join(methodParameters) + ')' + returnType
-            elif(0x7b <= and c <= 0x8f):
+            elif(0x7b <= c and c <= 0x8f):
                 A, B, readBytes = self.__getArguments('12x', bytecode[i:])
                 codeString += ['neg-int', 'not-int', 'neg-long', 'not-long', 'neg-float', 'neg-double', 'int-to-long', 'int-to-float', 'int-to-double', 'long-to-int', 'long-to-float', 'long-to-double', 'float-to-int', 'float-to-long', 'float-to-double', 'double-to-int', 'double-to-long', 'double-to-float', 'int-to-byte', 'int-to-char', 'int-to-short'][c - 0x7b]
                 codeString += ' ' + ', '.join(self.resolveParams(p) for p in [A, B])
