@@ -71,3 +71,11 @@ class Class:
             if(method.code is not None):
                 res += method.code.disassemble()
         return res
+
+class ClassDataItem:
+    def __init__(self, sf, insf, dm, vm):
+        self.staticFields = sf
+        self.instanceFields = insf
+        self.directMethods = dm
+        self.virtualMethods = vm
+        return

@@ -87,3 +87,10 @@ class Method(RawMethod):
         if(flags & 0x02 == 0x02):
             warnings.append('WARNING: failed to decode some prototypes. They were left raw.')
         return '\n'.join(warnings) + '\n' + res
+
+class Prototype:
+    def __init__(self, s, r, p):
+        self.shortyDescriptor = s
+        self.returnType = r
+        self.parameters = p
+        return

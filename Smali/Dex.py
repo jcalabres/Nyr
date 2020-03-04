@@ -2,7 +2,6 @@ import Smali.Encoders as Encoder
 from Smali.CodeItem import *
 from Smali.Field import *
 from Smali.Method import *
-from Smali.Prototype import *
 from Smali.Class import *
 from Smali.Annotations import *
 from Smali.Exceptions import * 
