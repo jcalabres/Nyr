@@ -1,12 +1,6 @@
 # Nyr
 
-A Homemade Smali Disassembler.
-
-# Why?
-
-As Reverse Engineers we want to know how a disassembler work. 
-
-So, the best aproach is to implement one.
+Nyr is a Smali disassembler and emulator (on the way) for reverse engineers and malware analysts. It is designed to be easy to use yet extremely resilient to even the most complex forms of anti-disassembling.
 
 # Usage
 
