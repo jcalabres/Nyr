@@ -319,9 +319,6 @@ class Dex:
             typeList.append(self.getType(self.toInt(self.dex[offset + i + 4: offset + i + 6])))
         return typeList
 
-    def showProperties(self):
-        print(self)
-
     def __str__(self):
         res = 'Magic: '
         magic = self.getMagic()
@@ -360,4 +357,3 @@ class Dex:
         res += 'Method count: ' + str(self.getMethodIdsSize()) + '\n'
         res += 'Class count: ' + str(self.getClassDefsSize()) 
         return res
-
