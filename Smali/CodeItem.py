@@ -112,7 +112,7 @@ class CodeItem:
             elif(0x0a <= c and c <= 0x0d):
                 A, readBytes = self.__getArguments('11x', bytecode[i:])
                 codeString += ['move-result', 'move-result-wide', 'move-result-object', 'move-exception'][c - 0x0a]
-                codeString += ' ' + self.resolveParams(A)
+                codeString += ' ' + self.resolveParams(A)         
             elif(c == 0x0e):
                 readBytes += self.__getArguments('10x', bytecode[i:])[0]
                 codeString += 'return-void'
@@ -135,6 +135,15 @@ class CodeItem:
             elif(c == 0x16):
                 A, B, readBytes = self.__getArguments('21s', bytecode[i:])
                 codeString += 'const-wide/16 ' + self.resolveParams(A) + ', ' + str(B)
+            elif(c == 0x17):
+                A, B, readBytes = self.__getArguments('31i', bytecode[i:])
+                codeString += 'const-wide/32 ' + self.resolveParams(A) + ', ' + str(B)
+            elif(c == 0x18):
+                A, B, readBytes = self.__getArguments('51l', bytecode[i:])
+                codeString += 'const-wide ' + self.resolveParams(A) + ', ' + str(B)
+            elif(c == 0x19):
+                A, B, readBytes = self.__getArguments('21h', bytecode[i:])
+                codeString += 'const-wide/high16 ' + self.resolveParams(A) + ', ' + str(B)  
             elif(c == 0x1a):
                 A, B, readBytes = self.__getArguments('21c', bytecode[i:])
                 try:
@@ -187,6 +196,7 @@ class CodeItem:
                     codeString += 'WARNING: failed to decode type name. Leaving it raw.\n'
                     codeString += tabSpace * ' '
                     codeString += 'new-array ' + ', '.join(self.resolveParams(p) for p in [A, B]) + ', ' + str(self.typeResolver(C))
+            # TODO 0x24, 0x25, 0x26
             elif(c == 0x27):
                 A, readBytes = self.__getArguments('11x', bytecode[i:])
                 codeString += 'throw ' + self.resolveParams(A)
@@ -196,6 +206,10 @@ class CodeItem:
             elif(c == 0x29):
                 A, readBytes = self.__getArguments('20t', bytecode[i:])
                 codeString += 'goto/16 +' + str(A)
+            elif(c == 0x2a):
+                A, readBytes = self.__getArguments('30t', bytecode[i:])
+                codeString += 'goto/32 +' + str(A)
+            # TODO 0x2b
             elif(c == 0x2c):
                 #TODO: implement parser for the sparse-switch-payload item, and update codeString accordingly
                 A, B, readBytes = self.__getArguments('31t', bytecode[i:])
@@ -239,6 +253,7 @@ class CodeItem:
                 methodParameters = list(map(lambda x: x.decode(self.encoding), method.proto.parameters))
                 returnType = method.proto.returnType.decode(self.encoding)
                 codeString += methodClass + '->' + method.name.decode(self.encoding) + '(' + ''.join(methodParameters) + ')' + returnType
+            #TODO 74...78
             elif(0x7b <= c and c <= 0x8f):
                 A, B, readBytes = self.__getArguments('12x', bytecode[i:])
                 codeString += ['neg-int', 'not-int', 'neg-long', 'not-long', 'neg-float', 'neg-double', 'int-to-long', 'int-to-float', 'int-to-double', 'long-to-int', 'long-to-float', 'long-to-double', 'float-to-int', 'float-to-long', 'float-to-double', 'double-to-int', 'double-to-long', 'double-to-float', 'int-to-byte', 'int-to-char', 'int-to-short'][c - 0x7b]
