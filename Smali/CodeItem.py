@@ -68,6 +68,19 @@ class CodeItem:
             F = (bytecode[5] & 0xf0) >> 4
             G = bytecode[1] & 0x0f
             return [A, B, C, D, E, F, G, 6]
+        elif(format == '3rc' or format == '3rms' or format == "3rmi"):
+            arguments = []
+            A = self.intParser(bytecode[1])
+            B = self.intParser(bytecode[2 : 4])
+            C = bytecode[4 : 6]
+            N = C + A - 1
+            arguments.append(C)
+            paramIndex = 6
+            for i in range(1,N):
+                arguments.append(bytecode[paramIndex : paramIndex + 2])
+                paramIndex+=2
+            arguments.append(6+paramIndex)
+            return arguments
         elif(format == '51l'):
             return [bytecode[1], self.intParser(bytecode[2 : 10]), 10]
 
@@ -196,7 +209,23 @@ class CodeItem:
                     codeString += 'WARNING: failed to decode type name. Leaving it raw.\n'
                     codeString += tabSpace * ' '
                     codeString += 'new-array ' + ', '.join(self.resolveParams(p) for p in [A, B]) + ', ' + str(self.typeResolver(C))
-            # TODO 0x24, 0x25, 0x26
+            elif(c == 0x24):
+                A, B, C, D, E, F, G, readBytes = self.__getArguments('35c', bytecode[i:])
+                codeString += 'filled-new-array'
+                codeString += ' {' + ', '.join(self.resolveParams(p) for p in [C, D, E, F, G][:A]) + '}, '
+                codeString += self.typeResolver(B)
+            elif(c == 0x25):
+                arguments = self.__getArguments('3rc', bytecode[i:])
+                A, B, C = arguments[0:3]
+                nargs = arguments[3:-1]
+                readBytes = arguments[-1]
+                codeString += 'filled-new-array/range '
+                codeString += ' {' + self.resolveParams(C) + ', '.join(self.resolveParams(p) for p in nargs) + '}, '
+                codeString += self.typeResolver(B)
+            elif(c == 0x26):
+                #TODO: implement parser for the sparse-switch-payload item, and update codeString accordingly
+                A, B, readBytes = self.__getArguments('31t', bytecode[i:])
+                codeString += 'fill-array-data +' + self.resolveParams(A) + ', +' + str(B)
             elif(c == 0x27):
                 A, readBytes = self.__getArguments('11x', bytecode[i:])
                 codeString += 'throw ' + self.resolveParams(A)
@@ -209,7 +238,10 @@ class CodeItem:
             elif(c == 0x2a):
                 A, readBytes = self.__getArguments('30t', bytecode[i:])
                 codeString += 'goto/32 +' + str(A)
-            # TODO 0x2b
+             elif(c == 0x2b):
+                #TODO: implement parser for the sparse-switch-payload item, and update codeString accordingly
+                A, B, readBytes = self.__getArguments('31t', bytecode[i:])
+                codeString += 'packed-switch +' + self.resolveParams(A) + ', +' + str(B)
             elif(c == 0x2c):
                 #TODO: implement parser for the sparse-switch-payload item, and update codeString accordingly
                 A, B, readBytes = self.__getArguments('31t', bytecode[i:])
@@ -253,7 +285,15 @@ class CodeItem:
                 methodParameters = list(map(lambda x: x.decode(self.encoding), method.proto.parameters))
                 returnType = method.proto.returnType.decode(self.encoding)
                 codeString += methodClass + '->' + method.name.decode(self.encoding) + '(' + ''.join(methodParameters) + ')' + returnType
-            #TODO 74...78
+            elif(0x74 <= c and c <= 0x78):
+                arguments = self.__getArguments('3rc', bytecode[i:])
+                A, B, C = arguments[0:3]
+                nargs = arguments[3:-1]
+                readBytes = arguments[-1]
+                codeString += ['invoke-virtual/range', 'invoke-super/range', 'invoke-direct/range', 'invoke-static/range', 'invoke-interface/range'][c - 0x74]
+                codeString += ' {' + self.resolveParams(C) + ', '.join(self.resolveParams(p) for p in nargs) + '}, '
+                method = self.methodResolver(B)
+                codeString += method.name.decode(self.encoding)
             elif(0x7b <= c and c <= 0x8f):
                 A, B, readBytes = self.__getArguments('12x', bytecode[i:])
                 codeString += ['neg-int', 'not-int', 'neg-long', 'not-long', 'neg-float', 'neg-double', 'int-to-long', 'int-to-float', 'int-to-double', 'long-to-int', 'long-to-float', 'long-to-double', 'float-to-int', 'float-to-long', 'float-to-double', 'double-to-int', 'double-to-long', 'double-to-float', 'int-to-byte', 'int-to-char', 'int-to-short'][c - 0x7b]
@@ -266,6 +306,7 @@ class CodeItem:
                 A, B, readBytes = self.__getArguments('12x', bytecode[i:])
                 codeString += ['add-int/2addr', 'sub-int/2addr', 'mul-int/2addr', 'div-int/2addr', 'rem-int/2addr', 'and-int/2addr', 'or-int/2addr', 'xor-int/2addr', 'shl-int/2addr', 'shr-int/2addr', 'ushr-int/2addr', 'add-long/2addr', 'sub-long/2addr', 'mul-long/2addr', 'div-long/2addr', 'rem-long/2addr', 'and-long/2addr', 'or-long/2addr', 'xor-long/2addr', 'shl-long/2addr', 'shr-long/2addr', 'ushr-long/2addr', 'add-float/2addr', 'sub-float/2addr', 'mul-float/2addr', 'div-float/2addr', 'rem-float/2addr', 'add-double/2addr', 'sub-double/2addr', 'mul-double/2addr', 'div-double/2addr', 'rem-double/2addr'][c - 0xb0]
                 codeString += ' ' + ', '.join(self.resolveParams(p) for p in [A, B])
+            #TODO d0..d7, d8..e2, e3..f9, fa, fb
             elif(c == 0xfc):
                 A, B, C, D, E, F, G, readBytes = self.__getArguments('35c', bytecode[i:])
                 codeString += 'invoke-custom'
@@ -275,6 +316,24 @@ class CodeItem:
                 methodParameters = list(map(lambda x: x.decode(self.encoding), method.proto.parameters))
                 returnType = method.proto.returnType.decode(self.encoding)
                 codeString += methodClass + '->' + method.name.decode(self.encoding) + '(' + ''.join(methodParameters) + ')' + returnType
+            elif(c == 0xfd):
+                arguments = self.__getArguments('3rc', bytecode[i:])
+                A, B, C = arguments[0:3]
+                nargs = arguments[3:-1]
+                readBytes = arguments[-1]
+                codeString += 'invoke-custom/range'
+                codeString += ' {' + self.resolveParams(C) + ', '.join(self.resolveParams(p) for p in nargs) + '}, '
+                method = self.methodResolver(B)
+                methodClass = method.classId.decode(self.encoding)
+                methodParameters = list(map(lambda x: x.decode(self.encoding), method.proto.parameters))
+                returnType = method.proto.returnType.decode(self.encoding)
+                codeString += methodClass + '->' + method.name.decode(self.encoding) + '(' + ''.join(methodParameters) + ')' + returnType
+            elif(c == 0xfe):
+                A, B, readBytes = self.__getArguments('21c', bytecode[i:])
+                codeString += 'const-method-handle ' + self.resolveParams(A) + ', ' + str(B)         
+            elif(c == 0xff):
+                A, B, readBytes = self.__getArguments('21c', bytecode[i:])
+                codeString += 'const-method-type ' + self.resolveParams(A) + ', ' + str(B)
             else:
                 codeString += 'Missing implementation for opcode ' + hex(c) + '\n\n'
                 break
